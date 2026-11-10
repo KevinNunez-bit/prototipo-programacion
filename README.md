@@ -8,12 +8,6 @@ El prototipo está hecho para seguir el contrato tal cual, sin agregarle reglas 
 
 > Todos los datos (docentes, grupos y horarios) son inventados. No es información real de ningún departamento.
 
-## Diagrama del proceso
-
-Este es el diagrama de actividad (UML, con carriles) del proceso de programación que presenté en la junta:
-
-![Diagrama de actividad del proceso de programación](diagramas/1_proceso_programacion.png)
-
 ## Qué se necesita
 
 - Un navegador (Chrome, Firefox, Edge, etc.).
