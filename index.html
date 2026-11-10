@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipo de Programación CCT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* Layout: encabezado + pasos del procedimiento (Cl. 82-83) + área de trabajo, con plazos y avisos a la derecha */
+:root {
+  --bg: #EEF1EE; --surface: #FFFFFF; --sunk: #F6F8F6; --ink: #17222A; --muted: #56656D; --line: #D3DAD6;
+  --accent: #22577A; --accent-ink: #FFFFFF; --accent-soft: #E1ECF3;
+  --ok: #2B7A4B; --ok-soft: #E3F2E8; --bad: #B3261E; --bad-soft: #FBE7E5; --warn: #9A5B00; --warn-soft: #FBF0DC;
+  --f-display: "Archivo", "Arial Narrow", Arial, sans-serif;
+  --f-body: "Source Sans 3", "Segoe UI", Roboto, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11171B; --surface: #192127; --sunk: #141B20; --ink: #E3E9E6; --muted: #9AA8AF; --line: #2D3940;
+  --accent: #7DB3D6; --accent-ink: #0E1A22; --accent-soft: #1D3242;
+  --ok: #72CF98; --ok-soft: #173326; --bad: #F2938B; --bad-soft: #3A1D1B; --warn: #E3B262; --warn-soft: #382A12;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #11171B; --surface: #192127; --sunk: #141B20; --ink: #E3E9E6; --muted: #9AA8AF; --line: #2D3940;
+  --accent: #7DB3D6; --accent-ink: #0E1A22; --accent-soft: #1D3242;
+  --ok: #72CF98; --ok-soft: #173326; --bad: #F2938B; --bad-soft: #3A1D1B; --warn: #E3B262; --warn-soft: #382A12;
+  color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15.5px; line-height: 1.5;
+  padding-left: 16px; padding-right: 16px; padding-block: 20px 40px; }
+.wrap { max-width: 1340px; margin: 0 auto; display: grid; gap: 18px; }
+h1, h2, h3 { font-family: var(--f-display); font-stretch: 85%; text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(1.6rem, 3.2vw, 2.2rem); font-weight: 800; letter-spacing: -0.01em; }
+h2 { font-size: 1.35rem; font-weight: 750; }
+h3 { font-size: 1.02rem; font-weight: 700; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.mono { font-family: var(--f-mono); font-size: 0.86em; }
+.small { font-size: 0.84rem; }
+
+header.top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px 24px; }
+.tag { display: inline-block; font-family: var(--f-mono); font-size: 0.74rem; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--warn); background: var(--warn-soft); padding: 2px 8px; border-radius: 4px; margin-bottom: 6px; }
+.top p { max-width: 70ch; margin-top: 6px; }
+
+.steps { display: grid; grid-template-columns: repeat(6, minmax(150px, 1fr)); overflow-x: auto; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 10px; }
+.step { appearance: none; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; padding: 10px 14px;
+  border-right: 1px solid var(--line); cursor: pointer; display: grid; gap: 2px; position: relative; }
+.step:last-child { border-right: 0; }
+.step[disabled] { cursor: not-allowed; opacity: 0.45; }
+.step .n { font-family: var(--f-mono); font-size: 0.75rem; color: var(--muted); }
+.step .t { font-weight: 700; font-size: 0.92rem; line-height: 1.2; }
+.step .p { font-size: 0.76rem; color: var(--muted); }
+.step.done .n::after { content: " ✓"; color: var(--ok); }
+.step.cur { background: var(--accent-soft); }
+.step.cur::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 370px; gap: 18px; align-items: start; }
+@media (max-width: 1060px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 16px; min-width: 0; }
+.lead { max-width: 78ch; }
+.cl { font-family: var(--f-mono); font-size: 0.78rem; color: var(--accent); background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+blockquote { margin: 0; padding: 8px 12px; border-left: 3px solid var(--line); color: var(--muted); font-size: 0.9rem; max-width: 80ch; }
+
+.btns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { appearance: none; font: inherit; font-weight: 600; font-size: 0.93rem; border-radius: 7px; padding: 7px 13px; cursor: pointer;
+  border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); }
+.btn.sec { background: transparent; color: var(--accent); }
+.btn.ghost { background: transparent; color: var(--muted); border-color: var(--line); }
+.btn.mini { font-size: 0.8rem; padding: 2px 8px; border-radius: 5px; }
+.btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.89rem; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--f-mono); font-weight: 500; font-size: 0.71rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); background: var(--sunk); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.n { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+tr.off td { color: var(--muted); }
+.grp { display: inline-flex; gap: 4px; align-items: center; font-family: var(--f-mono); font-size: 0.78rem; border: 1px solid var(--line);
+  background: var(--sunk); border-radius: 5px; padding: 1px 6px; margin: 1px 2px 1px 0; white-space: nowrap; }
+.grp.asig { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
+.grp button { appearance: none; border: 0; background: transparent; color: var(--muted); cursor: pointer; font: inherit; padding: 0 2px; }
+button.grp { cursor: pointer; color: var(--ink); }
+button.grp:hover { border-color: var(--accent); }
+
+.pill { display: inline-block; font-size: 0.74rem; font-weight: 700; padding: 1px 8px; border-radius: 99px; white-space: nowrap; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.info { background: var(--accent-soft); color: var(--accent); }
+
+.msg { border-radius: 8px; padding: 12px 14px; display: grid; gap: 6px; border: 1px solid; }
+.msg.ok { background: var(--ok-soft); border-color: var(--ok); }
+.msg.info { background: var(--accent-soft); border-color: var(--accent); }
+.msg.warn { background: var(--warn-soft); border-color: var(--warn); }
+.msg ul { margin: 0; padding-left: 20px; }
+.msg b.t { font-family: var(--f-display); font-stretch: 85%; font-size: 1.02rem; }
+
+.cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 760px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+.box { border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: grid; gap: 10px; align-content: start; min-width: 0; background: var(--sunk); }
+.acts { display: grid; gap: 8px; }
+.act { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: var(--sunk); }
+.act .txt { display: grid; min-width: 0; }
+.act .txt span { font-size: 0.8rem; color: var(--muted); }
+label.f { display: grid; gap: 4px; font-weight: 600; font-size: 0.88rem; }
+select, textarea, input[type="date"] { font: inherit; font-weight: 400; color: var(--ink); background: var(--sunk); border: 1px solid var(--line); border-radius: 7px; padding: 6px 9px; width: 100%; }
+textarea { min-height: 64px; resize: vertical; }
+ol.order { margin: 0; padding-left: 22px; display: grid; gap: 3px; }
+
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 640px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.stat { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--sunk); }
+.stat b { display: block; font-family: var(--f-display); font-stretch: 85%; font-size: 1.7rem; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stat span { font-size: 0.82rem; color: var(--muted); }
+
+aside.side { position: sticky; top: 12px; max-height: calc(100vh - 24px); display: grid; grid-template-rows: auto 1fr; gap: 12px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+@media (max-width: 1060px) { aside.side { position: static; max-height: 620px; } }
+.tabs { display: flex; gap: 6px; }
+.tab { appearance: none; font: inherit; font-weight: 600; font-size: 0.88rem; border: 1px solid var(--line); background: var(--sunk); color: var(--ink); border-radius: 99px; padding: 3px 12px; cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.side-body { overflow-y: auto; min-height: 0; display: grid; gap: 8px; align-content: start; }
+.plazo { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 0.87rem; }
+.plazo .d { font-family: var(--f-mono); font-size: 0.78rem; text-align: right; white-space: nowrap; }
+.plazo .r { grid-column: 1 / -1; font-size: 0.76rem; color: var(--muted); }
+.plazo.hecho b::before { content: "✓ "; color: var(--ok); }
+.aviso { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: var(--sunk); display: grid; gap: 2px; font-size: 0.86rem; }
+.aviso .meta { display: flex; justify-content: space-between; gap: 8px; font-family: var(--f-mono); font-size: 0.72rem; color: var(--muted); }
+.aviso .tt { font-weight: 700; }
+.empty { color: var(--muted); font-size: 0.88rem; padding: 8px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <span class="tag">Prototipo · datos ficticios</span>
+      <h1>Prototipo de Programación CCT</h1>
+      <p class="muted">Programación semestral de la carga académica tal como la establecen las cláusulas 82, 83, 87, 88 y 89 del Contrato Colectivo. La Jefatura asigna; el sistema muestra el orden del contrato, los plazos y la información que cada parte debe recibir.</p>
+    </div>
+    <button class="btn ghost" data-a="reiniciar">Reiniciar</button>
+  </header>
+  <nav class="steps" id="steps" aria-label="Pasos del procedimiento"></nav>
+  <div class="layout">
+    <main class="panel" id="main"></main>
+    <aside class="side">
+      <div class="tabs" role="tablist" id="tabs"></div>
+      <div class="side-body" id="side"></div>
+    </aside>
+  </div>
+</div>
+
+<script>
+// ---------- catálogo (datos ficticios) ----------
+const ATAS = { CAL: "Cálculo", ALG: "Álgebra y Geometría", EST: "Probabilidad y Estadística", MOD: "Modelación Matemática" };
+const SLOTS = { S1: "LMV 07–08", S2: "LMV 08–09", S3: "LMV 09–10", S4: "LMV 10–11", S5: "MJ 07–09", S6: "MJ 09–11", S7: "MJ 11–13", S8: "LMV 12–13" };
+// carga ordinaria (Cl. 87), sobrecarga (Cl. 88) y tope de asignatura (Cl. 89)
+const TIPOS = {
+  "TC-TIT": { txt: "Carrera, T. Completo, Titular", listado: 1, carrera: true, ord: [5, 9], sob: 4 },
+  "TC-ASO": { txt: "Carrera, T. Completo, Asociado", listado: 1, carrera: true, ord: [10, 12], sob: 4 },
+  "ASIG-I": { txt: "Asignatura, indeterminado", listado: 2 },
+  "CONC":   { txt: "Asignatura, concurso con prórroga", listado: 3 },
+  "HC":     { txt: "Asignatura, horas comprometidas", listado: 4 },
+  "NUEVO":  { txt: "Asignatura, ganador de concurso (Etapa 3)", listado: 3 }
+};
+const ORDEN = {
+  1: { "TC-TIT": [1, "Indeterminados del Departamento"], "TC-ASO": [1, "Indeterminados del Departamento"], "ASIG-I": [1, "Indeterminados del Departamento"],
+       "HC": [2, "Horas comprometidas (punto 2)"], "CONC": [3, "Concurso con derecho a prórroga (punto 3)"] },
+  2: { "ASIG-I": [1, "Asignatura indeterminado (punto 1)"], "HC": [2, "Asignatura con horas comprometidas (punto 2)"],
+       "CONC": [3, "Asignatura por concurso con prórroga (punto 3)"], "TC-TIT": [5, "Carrera indeterminado, sobrecarga (punto 5)"],
+       "TC-ASO": [5, "Carrera indeterminado, sobrecarga (punto 5)"] }
+};
+const PASOS = [
+  ["Listados oficiales", "Antes de programar"],
+  ["Primera Etapa", "A la CDVP: 50 días hábiles antes"],
+  ["Segunda Etapa", "A la CDVP: 40 días hábiles antes"],
+  ["CDVP: 1.ª reunión", "35 días hábiles antes"],
+  ["Tercera Etapa", "A la CDVP: 15 días hábiles antes"],
+  ["Colegio Departamental", "Hasta 10 días hábiles después"]
+];
+// ejemplo de cómo podría programar la Jefatura (solo para la demostración)
+const EJEMPLO = {
+  1: { p1: ["G01", "G11"], p7: ["G07", "G08", "G16"], p2: ["G03", "G04"], p3: ["G06", "G09"], p4: ["G05"], p5: ["G10"], p6: ["G13"] },
+  2: { p2: ["G02"], p4: ["G14"], p5: ["G12"] }
+};
+
+function inicial() {
+  return {
+    profs: [
+      { id: "p1", nombre: "Dra. Elena Ríos Medina", tipo: "TC-TIT", antig: 22, atas: ["CAL", "EST"], horas: null, previo: ["S1", "S2"] },
+      { id: "p7", nombre: "Dra. Patricia Gámez Lugo", tipo: "TC-ASO", antig: 12, atas: ["ALG", "EST"], horas: null, previo: ["S5", "S7", "S4"] },
+      { id: "p2", nombre: "Mtro. Jorge Valenzuela Soto", tipo: "ASIG-I", antig: 15, atas: ["CAL"], horas: 10, previo: ["S3", "S4"] },
+      { id: "p3", nombre: "Mtra. Martha Leyva Ochoa", tipo: "ASIG-I", antig: 9, atas: ["ALG"], horas: 8, previo: ["S3", "S6"] },
+      { id: "p4", nombre: "Mtro. Ricardo Félix Durazo", tipo: "HC", antig: 6, atas: ["CAL", "ALG"], horas: 5, previo: ["S8"] },
+      { id: "p5", nombre: "Mtra. Ana Sofía Cota Ibarra", tipo: "CONC", antig: 3, atas: ["EST"], horas: 4, previo: ["S6"], concurso: "2024-1" },
+      { id: "p6", nombre: "Lic. Luis Ángel Moreno Paz", tipo: "CONC", antig: 1, atas: ["CAL"], horas: 5, previo: ["S6"], concurso: "2025-2" },
+      { id: "p8", nombre: "Dr. Héctor Ruiz Bojórquez", tipo: "TC-ASO", antig: 18, atas: ["CAL"], horas: null, previo: [], licencia: "Sabático" }
+    ],
+    grupos: [
+      ["G01", "Cálculo Diferencial e Integral I", "CAL", 5, "S1"], ["G02", "Cálculo Diferencial e Integral I", "CAL", 5, "S2"],
+      ["G03", "Cálculo Diferencial e Integral II", "CAL", 5, "S3"], ["G04", "Cálculo Diferencial e Integral II", "CAL", 5, "S4"],
+      ["G05", "Cálculo Diferencial e Integral III", "CAL", 5, "S8"], ["G13", "Cálculo Diferencial e Integral I", "CAL", 5, "S6"],
+      ["G14", "Ecuaciones Diferenciales", "CAL", 5, "S5"],
+      ["G06", "Álgebra Lineal I", "ALG", 4, "S3"], ["G07", "Álgebra Lineal I", "ALG", 4, "S5"], ["G16", "Álgebra Lineal II", "ALG", 4, "S4"],
+      ["G08", "Geometría Analítica", "ALG", 4, "S7"], ["G09", "Álgebra Superior", "ALG", 4, "S6"],
+      ["G10", "Probabilidad", "EST", 4, "S6"], ["G11", "Estadística", "EST", 4, "S2"], ["G12", "Estadística", "EST", 4, "S7"],
+      ["G15", "Seminario de Modelación", "MOD", 4, "S8"]
+    ].map(([clave, materia, ata, hsm, slot]) => ({ clave, materia, ata, hsm, slot, asignado: null, etapa: null, e3: null })),
+    inicio: "2027-01-25",
+    paso: 1, vista: 1, tab: "plazos",
+    listados: false,
+    et: { 1: {}, 2: {}, 3: {} },
+    incs: [], dict12: false, dict3: false, colegio: false, resuelto: false, publicado: false,
+    avisos: [], docSel: "p1", incErr: false
+  };
+}
+let S = inicial();
+
+// ---------- utilidades ----------
+const h = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const prof = id => S.profs.find(p => p.id === id);
+const grupo = c => S.grupos.find(g => g.clave === c);
+const deProf = id => S.grupos.filter(g => g.asignado === id);
+const carga = id => deProf(id).reduce((a, g) => a + g.hsm, 0);
+const disponibles = () => S.grupos.filter(g => !g.asignado && !g.e3);
+const programables = () => S.profs.filter(p => !p.licencia);
+function derecho(p) { const t = TIPOS[p.tipo]; return t.carrera ? `${t.ord[0]}–${t.ord[1]} h (Cl. 87)` : `${p.horas} HSM`; }
+function minimo(p) { const t = TIPOS[p.tipo]; return t.carrera ? t.ord[0] : p.horas; }
+function limite(p) { const t = TIPOS[p.tipo]; return t.carrera ? `${t.ord[1]} + ${t.sob} sobrecarga (Cl. 87-88)` : "25 HSM (Cl. 89)"; }
+
+function aviso(para, titulo, detalle, cl) { S.avisos.push({ n: S.avisos.length + 1, para, titulo, detalle, cl }); }
+
+// ---------- días hábiles ----------
+// descuenta fines de semana, vacaciones de invierno (Cl. 92) y el 2 de noviembre (Cl. 95)
+function habil(d) {
+  const w = d.getDay(), m = d.getMonth(), day = d.getDate();
+  if (w === 0 || w === 6) return false;
+  if ((m === 11 && day >= 20) || (m === 0 && day <= 2)) return false;
+  if (m === 10 && day === 2) return false;
+  return true;
+}
+function mover(base, n) {
+  const d = new Date(base + "T12:00:00"), paso = n < 0 ? -1 : 1;
+  let k = Math.abs(n);
+  while (k > 0) { d.setDate(d.getDate() + paso); if (habil(d)) k--; }
+  return d;
+}
+const iso = d => d.toISOString().slice(0, 10);
+const fmt = d => d.toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+
+function plazos() {
+  const I = S.inicio, at = n => mover(I, n);
+  const e1 = at(-50), e2 = at(-40), e3 = at(-15);
+  return [
+    ["Primera Etapa: notificar a docentes", mover(iso(e1), -3), "Al menos 3 días hábiles antes de entregarla a la CDVP (Cl. 83-3)", S.et[1].notif],
+    ["Primera Etapa: entregar a la CDVP", e1, "50 días hábiles antes del inicio (Cl. 83-1)", S.et[1].entrega],
+    ["Primera Etapa: acta Jefatura–Delegación", mover(iso(e1), 4), "4 días hábiles después de la entrega (Cl. 83-8)", S.et[1].acta],
+    ["Segunda Etapa: notificar a docentes", mover(iso(e2), -3), "Cl. 83-3", S.et[2].notif],
+    ["Segunda Etapa: entregar a la CDVP", e2, "40 días hábiles antes del inicio (Cl. 83-2)", S.et[2].entrega],
+    ["Segunda Etapa: acta Jefatura–Delegación", mover(iso(e2), 4), "Cl. 83-8", S.et[2].acta],
+    ["CDVP: 1.ª reunión (Etapas 1 y 2)", at(-35), "35 días hábiles antes del inicio (Cl. 83-7)", S.dict12],
+    ["Convocatorias de concurso publicadas", at(-30), "Al menos 30 días hábiles antes (Cl. 83-5)", S.grupos.some(g => g.e3)],
+    ["Tercera Etapa: notificar a docentes", mover(iso(e3), -3), "Cl. 83-3", S.et[3].notif],
+    ["Tercera Etapa: entregar a la CDVP", e3, "15 días hábiles antes del inicio (Cl. 83-6)", S.et[3].entrega],
+    ["Tercera Etapa: acta Jefatura–Delegación", mover(iso(e3), 4), "Cl. 83-8", S.et[3].acta],
+    ["CDVP: 2.ª reunión (Tercera Etapa)", at(-10), "10 días hábiles antes del inicio (Cl. 83-7)", S.dict3],
+    ["Inicio del semestre", new Date(I + "T12:00:00"), "", false],
+    ["H. Colegio Departamental resuelve", at(10), "A más tardar 10 días hábiles después del inicio (Cl. 83-11)", S.resuelto]
+  ];
+}
+function fechaDe(nombre) { return plazos().find(p => p[0] === nombre)[1]; }
+
+// ---------- acciones ----------
+const A = {
+  reiniciar() { S = inicial(); },
+  ir(d) { if (+d.v <= S.paso) S.vista = +d.v; },
+  tab(d) { S.tab = d.t; },
+  publicarListados() {
+    S.listados = true;
+    aviso("Delegación Sindical", "Listados oficiales publicados y entregados",
+      "1) Carrera indeterminado, 2) asignatura indeterminado, 3) ganadores de concurso y prórrogas, 4) horas comprometidas, 5) licencias y sabáticos, 6) grupos a ofertar.", "Cl. 83");
+    S.paso = S.vista = 2;
+  },
+  asignar(d) {
+    const g = grupo(d.g), et = +d.e;
+    g.asignado = d.p; g.etapa = et;
+    if (S.et[et].notif) aviso("Delegación Sindical", `Modificación: ${g.clave} asignado a ${prof(d.p).nombre}`, `${g.materia} · ${SLOTS[g.slot]}`, "Cl. 83-8");
+  },
+  quitar(d) {
+    const g = grupo(d.g), quien = prof(g.asignado).nombre, et = g.etapa;
+    g.asignado = null; g.etapa = null;
+    if (S.et[et].notif) aviso("Delegación Sindical", `Modificación: ${g.clave} retirado a ${quien}`, `${g.materia} queda como carga disponible.`, "Cl. 83-8");
+  },
+  ejemplo(d) {
+    const et = +d.e;
+    Object.entries(EJEMPLO[et]).forEach(([p, gs]) => gs.forEach(c => { const g = grupo(c); if (!g.asignado) { g.asignado = p; g.etapa = et; } }));
+  },
+  notificar(d) {
+    const et = +d.e;
+    S.et[et].notif = true;
+    const n = new Set(S.grupos.filter(g => g.etapa === et).map(g => g.asignado)).size;
+    aviso("Docentes", `${["", "Primera", "Segunda", "Tercera"][et]} Etapa notificada a ${n} docentes`, "Pueden consultar su programación en línea y, en su caso, presentar inconformidad por escrito ante la CDVP dentro de 5 días hábiles.", "Cl. 83-3");
+    aviso("Delegación Sindical", `Programación de la ${["", "Primera", "Segunda", "Tercera"][et]} Etapa publicada`, `Carga académica aún disponible: ${disponibles().length} grupo(s).`, "Cl. 83-3");
+  },
+  entregar(d) {
+    const et = +d.e;
+    S.et[et].entrega = true;
+    aviso("CDVP", `${["", "Primera", "Segunda", "Tercera"][et]} Etapa entregada a los miembros de la CDVP`, "En los formatos oficiales, con toda la carga ofertada y la aún disponible.", `Cl. 83-${et === 1 ? 1 : et === 2 ? 2 : 6}`);
+    if (et === 1) S.paso = Math.max(S.paso, 3);
+    if (et === 2) S.paso = Math.max(S.paso, 4);
+  },
+  acta(d) {
+    const et = +d.e;
+    S.et[et].acta = true;
+    aviso("CDVP", `Acta de acuerdo de la ${["", "Primera", "Segunda", "Tercera"][et]} Etapa`, "Firmada por la Jefatura y la Delegación Sindical; se entrega a cada miembro de la CDVP.", "Cl. 83-8");
+  },
+  inconformidad() {
+    const t = document.getElementById("inc-texto").value.trim();
+    const et = [3, 2, 1].find(e => S.et[e].notif);
+    if (!t || !et) { S.incErr = true; return; }
+    S.incErr = false;
+    S.incs.push({ id: S.incs.length + 1, pid: S.docSel, etapa: et, texto: t, estado: "pendiente" });
+    aviso("CDVP", `Inconformidad por escrito de ${prof(S.docSel).nombre}`, t, "Cl. 83-3");
+  },
+  resolver(d) {
+    const i = S.incs.find(x => x.id === +d.id), quien = prof(i.pid).nombre;
+    if (d.r === "colegio") { i.estado = "colegio"; aviso("H. Colegio Departamental", `Inconformidad #${i.id} sin acuerdo en la CDVP`, `Se turna para resolución definitiva (${quien}).`, "Cl. 83-3"); return; }
+    const por = i.estado === "colegio" ? "H. Colegio Departamental" : "CDVP";
+    i.estado = d.r; i.por = por;
+    aviso("Docentes", `Inconformidad #${i.id}: ${d.r === "procede" ? "procede" : "no procede"}`, `Resolución de ${por} para ${quien}.`, por === "CDVP" ? "Cl. 83-7" : "Cl. 83-3");
+  },
+  dict12() {
+    S.dict12 = true;
+    aviso("Jefatura", "Dictamen de la CDVP: Primera y Segunda Etapa", "Primera reunión de verificación.", "Cl. 83-7");
+    S.paso = S.vista = 5;
+  },
+  convocar(d) {
+    const g = grupo(d.g); g.e3 = "convocado";
+    aviso("Delegación Sindical", `Concurso de evaluación curricular: ${g.clave}`, `${g.materia}, ATA de ${ATAS[g.ata]}.`, "Cl. 82, Tercera Etapa 1; Cl. 83-5");
+  },
+  jurado(d) {
+    const g = grupo(d.g);
+    if (d.r === "ganador") {
+      const id = "n" + g.clave;
+      S.profs.push({ id, nombre: `Ganador/a del concurso ${g.clave}`, tipo: "NUEVO", antig: 0, atas: [g.ata], horas: g.hsm, previo: [] });
+      g.e3 = "ganador"; g.asignado = id; g.etapa = 3;
+      aviso("Delegación Sindical", `Resultado del jurado: ${g.clave} tiene ganador/a`, "Se programa respetando el orden del jurado.", "Cl. 82, Tercera Etapa 1");
+    } else {
+      g.e3 = "desierto";
+      aviso("Delegación Sindical", `Concurso desierto: ${g.clave}`, "La carga se programa siguiendo el numeral 2 de la Tercera Etapa.", "Cl. 82, Tercera Etapa 2");
+    }
+  },
+  asignarE3(d) {
+    const sel = document.getElementById("sel-" + d.g);
+    if (!sel || !sel.value) return;
+    const g = grupo(d.g); g.asignado = sel.value; g.etapa = 3; g.e3 = "consulta";
+    if (S.et[3].notif) aviso("Delegación Sindical", `Modificación: ${g.clave} asignado a ${prof(sel.value).nombre}`, g.materia, "Cl. 83-8");
+  },
+  contratacion(d) {
+    const g = grupo(d.g); g.e3 = "contratacion";
+    aviso("CDVP", `Propuesta de contratación por asignación: ${g.clave}`, "La Jefatura la presenta previa consulta con la Delegación Sindical. La CDVP emite dictamen y el Colegio aprueba (no más de un semestre).", "Cl. 82, Tercera Etapa 4");
+  },
+  dict3() {
+    S.dict3 = true;
+    aviso("Jefatura", "Dictamen de la CDVP: Tercera Etapa", "Segunda reunión de verificación.", "Cl. 83-7");
+    S.paso = S.vista = 6;
+  },
+  colegio() {
+    S.colegio = true;
+    aviso("H. Colegio Departamental", "Programación definitiva enviada", "Con los grupos que requieren docentes por asignación y los dictámenes de la CDVP. Se publica y se entrega copia a la CDVP.", "Cl. 83-9");
+  },
+  resolverColegio() {
+    S.resuelto = S.publicado = true;
+    aviso("Docentes", "Programación resuelta en definitiva", "El H. Colegio Departamental verificó el cumplimiento de la normatividad.", "Cl. 83-11");
+  }
+};
+
+// ---------- piezas de vista ----------
+function chipAsignado(g, editable) {
+  return `<span class="grp asig" title="${h(g.materia)} · ${SLOTS[g.slot]}">${g.clave} · ${g.hsm}${editable ? `<button data-a="quitar" data-g="${g.clave}" aria-label="Quitar ${g.clave}">✕</button>` : ""}</span>`;
+}
+
+function tablaOrden(et) {
+  const ord = ORDEN[et];
+  const cands = programables().filter(p => ord[p.tipo]).sort((a, b) =>
+    ord[a.tipo][0] - ord[b.tipo][0] || (a.tipo === "CONC" && b.tipo === "CONC" ? a.concurso.localeCompare(b.concurso) : b.antig - a.antig));
+  const cerrado = S.et[et].entrega;
+  return `<div class="tbl-wrap"><table><thead><tr><th>#</th><th>Docente</th><th>Prioridad (Cl. 82)</th><th>Antig.</th><th>ATA</th><th>${et === 1 ? "Carga a que tiene derecho" : "Límite"}</th><th>Asignado</th><th>Horario previo</th><th>Grupos</th></tr></thead><tbody>
+  ${cands.map((p, i) => {
+    const mios = deProf(p.id);
+    const libres = cerrado ? [] : disponibles().filter(g => p.atas.includes(g.ata));
+    return `<tr><td class="n">${i + 1}</td><td>${h(p.nombre)}<div class="small muted">${h(TIPOS[p.tipo].txt)}${p.concurso ? ` · concurso ${p.concurso}` : ""}</div></td>
+      <td class="small">${h(ord[p.tipo][1])}</td><td class="n">${p.antig}</td><td class="mono">${p.atas.join(", ")}</td>
+      <td class="small">${et === 1 ? derecho(p) : limite(p)}</td><td class="n"><b>${carga(p.id)}</b></td>
+      <td class="mono small">${p.previo.map(s => SLOTS[s]).join("<br>")}</td>
+      <td>${mios.map(g => chipAsignado(g, g.etapa === et && !cerrado)).join("")}
+        ${libres.length ? `<div class="small muted" style="margin-top:4px">Asignar:</div>${libres.map(g => `<button class="grp" data-a="asignar" data-g="${g.clave}" data-p="${p.id}" data-e="${et}" title="${h(g.materia)}">+ ${g.clave} · ${SLOTS[g.slot]}</button>`).join("")}` : ""}</td></tr>`;
+  }).join("")}</tbody></table></div>`;
+}
+
+function tablaGrupos() {
+  return `<div class="tbl-wrap"><table><thead><tr><th>Clave</th><th>Materia</th><th>ATA</th><th>Horario</th><th>HSM</th><th>Programado a</th><th>Etapa</th></tr></thead><tbody>
+  ${S.grupos.map(g => {
+    const est = g.e3 === "contratacion" ? `<span class="pill warn">Contratación por asignación</span>` : g.e3 === "convocado" ? `<span class="pill warn">En concurso</span>`
+      : g.asignado ? h(prof(g.asignado).nombre) : `<span class="pill info">Disponible</span>`;
+    return `<tr><td class="mono">${g.clave}</td><td>${h(g.materia)}</td><td class="mono">${g.ata}</td><td class="mono">${SLOTS[g.slot]}</td><td class="n">${g.hsm}</td><td>${est}</td><td class="n">${g.etapa ?? "—"}</td></tr>`;
+  }).join("")}</tbody></table></div>`;
+}
+
+function accionesEtapa(et) {
+  const s = S.et[et], hay = et === 3 || S.grupos.some(g => g.etapa === et);
+  const nombre = ["", "Primera", "Segunda", "Tercera"][et];
+  const fila = (txt, sub, btn, hecho, ok) => `<div class="act"><div class="txt"><b>${hecho ? "✓ " : ""}${txt}</b><span>${sub}</span></div>${hecho ? `<span class="pill ok">Hecho</span>` : btn.replace("<button", `<button ${ok ? "" : "disabled"}`)}</div>`;
+  return `<div class="acts">
+    ${fila("Notificar a los docentes y publicar la programación", `Hasta el ${fmt(fechaDe(`${nombre} Etapa: notificar a docentes`))} · Cl. 83-3`, `<button class="btn" data-a="notificar" data-e="${et}">Notificar</button>`, s.notif, hay)}
+    ${fila("Entregar a los miembros de la CDVP", `Hasta el ${fmt(fechaDe(`${nombre} Etapa: entregar a la CDVP`))} · Cl. 83`, `<button class="btn" data-a="entregar" data-e="${et}">Entregar</button>`, s.entrega, s.notif)}
+    ${fila("Análisis conjunto Jefatura–Delegación Sindical y acta", `Hacia el ${fmt(fechaDe(`${nombre} Etapa: acta Jefatura–Delegación`))} · Cl. 83-8`, `<button class="btn" data-a="acta" data-e="${et}">Firmar acta</button>`, s.acta, s.entrega)}
+  </div>`;
+}
+
+function consultaDocente() {
+  const p = prof(S.docSel);
+  const mios = deProf(p.id).filter(g => S.et[g.etapa]?.notif);
+  const ult = [3, 2, 1].find(e => S.et[e].notif);
+  const venc = ult ? fmt(mover(iso(fechaDe(`${["", "Primera", "Segunda", "Tercera"][ult]} Etapa: notificar a docentes`)), 5)) : null;
+  return `<div class="box">
+    <h3>Consulta en línea del personal académico <span class="cl">Cl. 83</span></h3>
+    <label class="f">Ver como<select id="sel-docente">${programables().map(x => `<option value="${x.id}" ${x.id === p.id ? "selected" : ""}>${h(x.nombre)}</option>`).join("")}</select></label>
+    ${ult ? `<p><b>${mios.reduce((a, g) => a + g.hsm, 0)} HSM</b> notificadas</p>
+      ${mios.length ? `<div class="tbl-wrap"><table><tbody>${mios.map(g => `<tr><td class="mono">${g.clave}</td><td>${h(g.materia)}</td><td class="mono">${SLOTS[g.slot]}</td><td class="n">${g.hsm}</td><td class="small muted">Etapa ${g.etapa}</td></tr>`).join("")}</tbody></table></div>` : `<p class="empty">Sin grupos notificados.</p>`}
+      <p class="small muted">Carga académica aún disponible: ${disponibles().map(g => g.clave).join(", ") || "ninguna"}. Puede solicitarla por escrito a la Jefatura (Cl. 83-3).</p>
+      <label class="f">Inconformidad por escrito ante la CDVP<textarea id="inc-texto" placeholder="Ej.: No se me programó la carga que venía impartiendo en mi ATA."></textarea></label>
+      ${S.incErr ? `<p class="small" style="color:var(--bad)">Escribe el motivo de la inconformidad antes de presentarla.</p>` : ""}
+      <div class="btns"><button class="btn" data-a="inconformidad">Presentar inconformidad</button><span class="small muted">Plazo: 5 días hábiles desde la notificación (hacia el ${venc})</span></div>`
+      : `<p class="empty">La Jefatura todavía no ha notificado ninguna etapa.</p>`}
+  </div>`;
+}
+
+function panelInconformidades(etapas) {
+  const lista = S.incs.filter(i => etapas.includes(i.etapa));
+  const est = { pendiente: ["warn", "En CDVP"], colegio: ["warn", "En H. Colegio"], procede: ["ok", "Procede"], "no-procede": ["bad", "No procede"] };
+  return lista.length ? lista.map(i => {
+    const [c, t] = est[i.estado];
+    const btn = i.estado === "pendiente"
+      ? `<button class="btn sec mini" data-a="resolver" data-id="${i.id}" data-r="procede">Procede</button><button class="btn sec mini" data-a="resolver" data-id="${i.id}" data-r="no-procede">No procede</button><button class="btn ghost mini" data-a="resolver" data-id="${i.id}" data-r="colegio">Sin acuerdo: al H. Colegio</button>`
+      : i.estado === "colegio" ? `<span class="small muted">H. Colegio:</span><button class="btn sec mini" data-a="resolver" data-id="${i.id}" data-r="procede">Procede</button><button class="btn sec mini" data-a="resolver" data-id="${i.id}" data-r="no-procede">No procede</button>` : "";
+    return `<div class="act"><div class="txt"><b>#${i.id} ${h(prof(i.pid).nombre)} · Etapa ${i.etapa}</b><span>${h(i.texto)}</span></div><div class="btns"><span class="pill ${c}">${t}${i.por ? " · " + i.por : ""}</span>${btn}</div></div>`;
+  }).join("") : `<p class="empty">No se han presentado inconformidades.</p>`;
+}
+
+// ---------- vistas ----------
+const V = {
+  1() {
+    const listado = n => programables().concat(S.profs.filter(p => p.licencia)).filter(p => (p.licencia ? 5 : TIPOS[p.tipo].listado) === n);
+    const fila = p => `<tr class="${p.licencia ? "off" : ""}"><td>${h(p.nombre)}</td><td>${h(TIPOS[p.tipo].txt)}${p.licencia ? ` · <b>${h(p.licencia)}</b>` : ""}</td><td class="n">${p.antig} años</td><td class="mono">${p.atas.join(", ")}</td><td class="small">${p.licencia ? "No se programa" : derecho(p)}${p.concurso ? ` · concurso ${p.concurso}` : ""}</td></tr>`;
+    const tabla = (n, titulo) => `<h3>${n}. ${titulo}</h3><div class="tbl-wrap"><table><thead><tr><th>Docente</th><th>Contratación / categoría</th><th>Antigüedad</th><th>ATA</th><th>Horas</th></tr></thead><tbody>${listado(n).map(fila).join("") || `<tr><td colspan="5" class="muted">Sin registros</td></tr>`}</tbody></table></div>`;
+    return `<h2>Listados oficiales</h2>
+      <p class="lead">Antes de iniciar las etapas, la Jefatura de Departamento publica y entrega a la Delegación Sindical (Delegado/a y Subdelegado/a) los siguientes listados <span class="cl">Cl. 83</span>.</p>
+      <div class="btns"><button class="btn" data-a="publicarListados" ${S.listados ? "disabled" : ""}>${S.listados ? "Listados publicados" : "Publicar y entregar a la Delegación Sindical"}</button></div>
+      ${tabla(1, "Personal de carrera indeterminado (antigüedad, categoría y ATA)")}
+      ${tabla(2, "Asignatura indeterminado (antigüedad y horas indeterminadas por ATA)")}
+      ${tabla(3, "Ganadores de concurso y académicos con prórroga (ATA, antigüedad y fecha del concurso)")}
+      ${tabla(4, "Profesores con horas comprometidas (antigüedad y ATA)")}
+      ${tabla(5, "Académicos con incapacidad, licencia, beca de posgrado o sabático")}
+      <h3>6. Grupos que se ofertarán</h3>${tablaGrupos()}`;
+  },
+  2() {
+    return `<h2>Primera Etapa de la programación</h2>
+      <p class="lead">La Jefatura asigna la carga partiendo del académico de mayor antigüedad en el Departamento, en las ATA donde está indeterminado o adscrito, y así sucesivamente <span class="cl">Cl. 82, inciso c</span>. Para los horarios se consideran los que ha venido impartiendo <span class="cl">punto 1.2</span>. El orden de la tabla es el que fija el contrato.</p>
+      <div class="btns"><button class="btn sec" data-a="ejemplo" data-e="1" ${S.et[1].entrega ? "disabled" : ""}>Cargar un ejemplo de programación</button><span class="small muted">O asigna cada grupo con los botones “+”.</span></div>
+      ${tablaOrden(1)}
+      <p class="small muted">El Dr. Héctor Ruiz no aparece porque está en sabático (listado 5).</p>
+      ${accionesEtapa(1)}
+      ${consultaDocente()}`;
+  },
+  3() {
+    const pend = programables().filter(p => carga(p.id) < minimo(p));
+    return `<h2>Segunda Etapa de la programación</h2>
+      <blockquote>“Antes de iniciar con la programación de la Segunda Etapa, todo el personal académico deberá tener asignada la carga académica que a derecho le corresponda con base en lo establecido en la Primera Etapa.” (Cl. 82)</blockquote>
+      ${pend.length ? `<div class="msg warn"><b class="t">Personal sin la carga de la Primera Etapa</b><ul>${pend.map(p => `<li>${h(p.nombre)}: ${carga(p.id)} de ${minimo(p)}</li>`).join("")}</ul></div>` : `<div class="msg ok"><b class="t">Todo el personal tiene su carga de la Primera Etapa</b></div>`}
+      <p class="lead">Si queda carga disponible, se asigna como carga adicional en las ATA donde el académico está indeterminado o adscrito, en este orden y con prioridad al de mayor antigüedad. La sobrecarga del personal de carrera procede con el acuerdo de las instancias de la CDVP <span class="cl">Cl. 88</span>; la de asignatura no pasa de 25 horas <span class="cl">Cl. 89</span>.</p>
+      <div class="btns"><button class="btn sec" data-a="ejemplo" data-e="2" ${S.et[2].entrega ? "disabled" : ""}>Cargar un ejemplo de programación</button></div>
+      ${tablaOrden(2)}
+      ${accionesEtapa(2)}
+      ${consultaDocente()}`;
+  },
+  4() {
+    const listo = S.et[1].acta && S.et[2].acta && !S.incs.some(i => i.etapa <= 2 && ["pendiente", "colegio"].includes(i.estado));
+    return `<h2>CDVP: primera reunión de verificación</h2>
+      <p class="lead">La Comisión Departamental Verificadora de la Programación la forman la Jefatura, dos representantes de Recursos Humanos, el Delegado/a y Subdelegado/a sindical y un representante del Comité Ejecutivo del STAUS. En esta reunión verifica la Primera y la Segunda Etapa y resuelve las inconformidades <span class="cl">Cl. 83-7</span>.</p>
+      <h3>Inconformidades</h3>${panelInconformidades([1, 2])}
+      <div class="act"><div class="txt"><b>Actas de acuerdo recibidas</b><span>Primera Etapa: ${S.et[1].acta ? "sí" : "no"} · Segunda Etapa: ${S.et[2].acta ? "sí" : "no"}</span></div></div>
+      <div class="btns"><button class="btn" data-a="dict12" ${!listo || S.dict12 ? "disabled" : ""}>Emitir dictamen de la Primera y Segunda Etapa</button>
+      ${!listo ? `<span class="small muted">Faltan actas o hay inconformidades sin resolver.</span>` : ""}</div>
+      ${consultaDocente()}`;
+  },
+  5() {
+    const resto = S.grupos.filter(g => !g.asignado || g.etapa === 3);
+    const opciones = g => programables().filter(p => !["NUEVO"].includes(p.tipo)).map(p => `<option value="${p.id}">${h(p.nombre)} · ${p.antig} años · ${carga(p.id)} h</option>`).join("");
+    const filaE3 = g => {
+      let acc;
+      if (g.e3 === "ganador" || g.e3 === "consulta") acc = `<span class="pill ok">${h(prof(g.asignado).nombre)}</span>`;
+      else if (g.e3 === "contratacion") acc = `<span class="pill warn">Contratación por asignación</span>`;
+      else if (g.e3 === "convocado") acc = `<button class="btn sec mini" data-a="jurado" data-g="${g.clave}" data-r="ganador">Jurado: hay ganador/a</button><button class="btn sec mini" data-a="jurado" data-g="${g.clave}" data-r="desierto">Jurado: desierto</button>`;
+      else if (g.e3 === "desierto") acc = `<select id="sel-${g.clave}" style="width:auto;max-width:100%"><option value="">Consultar y asignar a…</option>${opciones(g)}</select><button class="btn sec mini" data-a="asignarE3" data-g="${g.clave}">Asignar</button><button class="btn ghost mini" data-a="contratacion" data-g="${g.clave}">Proponer contratación</button>`;
+      else acc = `<button class="btn sec mini" data-a="convocar" data-g="${g.clave}">Convocar concurso</button>`;
+      return `<div class="act"><div class="txt"><b>${g.clave} · ${h(g.materia)}</b><span>ATA de ${ATAS[g.ata]} · ${SLOTS[g.slot]} · ${g.hsm} HSM</span></div><div class="btns">${acc}</div></div>`;
+    };
+    const listo3 = S.et[3].acta && !S.incs.some(i => i.etapa === 3 && ["pendiente", "colegio"].includes(i.estado));
+    return `<h2>Tercera Etapa de la programación</h2>
+      <p class="lead">Si agotada la Segunda Etapa aún hay carga disponible, se aplica este mecanismo <span class="cl">Cl. 82</span>:</p>
+      <ol class="order">
+        <li>Se convoca a concurso de evaluación curricular por ATA y se programa respetando el orden del Jurado.</li>
+        <li>Si un concurso queda desierto, se consulta en este orden: (2.1) el personal adscrito, en el orden de la Segunda Etapa; (2.2) profesores del Departamento no adscritos al ATA que por su perfil puedan impartir la materia; (2.3) participantes ganadores o aptos; (2.4) participantes no aptos que cumplieron los requisitos mínimos; (2.5) asignatura que no participó, por antigüedad.</li>
+        <li>Se ofrece un grupo adicional, hasta 30 HSM, al personal de asignatura indeterminado en 25 HSM, por antigüedad.</li>
+        <li>Si no se cubre, la CDVP analiza la propuesta de contratación por asignación.</li>
+      </ol>
+      <h3>Carga disponible</h3>
+      <div class="acts">${resto.length ? resto.map(filaE3).join("") : `<p class="empty">No queda carga disponible.</p>`}</div>
+      ${accionesEtapa(3)}
+      <h3>CDVP: segunda reunión</h3>
+      ${panelInconformidades([3])}
+      <div class="btns"><button class="btn" data-a="dict3" ${!listo3 || S.dict3 ? "disabled" : ""}>Emitir dictamen de la Tercera Etapa</button></div>
+      ${consultaDocente()}`;
+  },
+  6() {
+    const asign = S.grupos.filter(g => g.asignado).length;
+    const contr = S.grupos.filter(g => g.e3 === "contratacion").length;
+    return `<h2>H. Colegio Departamental</h2>
+      <p class="lead">Al concluir la revisión de las tres etapas, la Jefatura envía al Colegio la programación definitiva con los dictámenes de la CDVP. El Colegio verifica el cumplimiento de la normatividad y resuelve en definitiva <span class="cl">Cl. 83-9 y 83-11</span>.</p>
+      <div class="stats">
+        <div class="stat"><b>${asign}</b><span>grupos programados</span></div>
+        <div class="stat"><b>${contr}</b><span>requieren docente por asignación</span></div>
+        <div class="stat"><b>${S.incs.length}</b><span>inconformidades presentadas</span></div>
+        <div class="stat"><b>${S.avisos.length}</b><span>avisos y entregas</span></div>
+      </div>
+      <div class="acts">
+        <div class="act"><div class="txt"><b>${S.colegio ? "✓ " : ""}Enviar la programación definitiva al H. Colegio</b><span>Se publica y se entrega copia a cada miembro de la CDVP · Cl. 83-9</span></div>${S.colegio ? `<span class="pill ok">Hecho</span>` : `<button class="btn" data-a="colegio">Enviar</button>`}</div>
+        <div class="act"><div class="txt"><b>${S.resuelto ? "✓ " : ""}El H. Colegio resuelve en definitiva</b><span>A más tardar el ${fmt(fechaDe("H. Colegio Departamental resuelve"))} · Cl. 83-11</span></div>${S.resuelto ? `<span class="pill ok">Hecho</span>` : `<button class="btn" data-a="resolverColegio" ${S.colegio ? "" : "disabled"}>Resolver</button>`}</div>
+      </div>
+      <h3>Programación</h3>${tablaGrupos()}
+      ${consultaDocente()}`;
+  }
+};
+
+function renderSide() {
+  document.getElementById("tabs").innerHTML = [["plazos", "Plazos"], ["avisos", `Avisos (${S.avisos.length})`]]
+    .map(([k, t]) => `<button class="tab" role="tab" data-a="tab" data-t="${k}" aria-selected="${S.tab === k}">${t}</button>`).join("");
+  const el = document.getElementById("side");
+  if (S.tab === "plazos") {
+    el.innerHTML = `<label class="f">Inicio del semestre<input type="date" id="f-inicio" value="${S.inicio}"></label>
+      <div>${plazos().map(([t, d, r, hecho]) => `<div class="plazo ${hecho ? "hecho" : ""}"><b>${t}</b><span class="d">${fmt(d)}</span>${r ? `<span class="r">${r}</span>` : ""}</div>`).join("")}</div>
+      <p class="small muted">Días hábiles: se descuentan fines de semana, las vacaciones de invierno (Cl. 92) y el 2 de noviembre (Cl. 95). Otros días inhábiles saldrían del calendario escolar.</p>`;
+  } else {
+    el.innerHTML = `<p class="small muted">La Jefatura informa en todo momento a la representación sindical de la carga disponible y de todas las modificaciones (Cl. 83-8).</p>` +
+      (S.avisos.length ? S.avisos.slice().reverse().map(a => `<div class="aviso"><div class="meta"><span>Para: ${h(a.para)}</span><span>${h(a.cl)}</span></div><div class="tt">${h(a.titulo)}</div><div>${h(a.detalle)}</div></div>`).join("")
+        : `<p class="empty">Todavía no hay avisos. El primero es la publicación de los listados.</p>`);
+  }
+}
+
+function render() {
+  document.getElementById("steps").innerHTML = PASOS.map(([t, p], i) => {
+    const n = i + 1;
+    return `<button class="step ${n < S.paso ? "done" : ""} ${n === S.vista ? "cur" : ""}" data-a="ir" data-v="${n}" ${n > S.paso ? "disabled" : ""}><span class="n">Paso ${n}</span><span class="t">${t}</span><span class="p">${p}</span></button>`;
+  }).join("");
+  document.getElementById("main").innerHTML = V[S.vista]();
+  renderSide();
+}
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-a]");
+  if (!b || b.disabled) return;
+  A[b.dataset.a](b.dataset);
+  render();
+  if (["ir", "publicarListados", "dict12", "dict3"].includes(b.dataset.a)) document.getElementById("steps").scrollIntoView({ block: "start", behavior: "smooth" });
+});
+document.addEventListener("change", e => {
+  if (e.target.id === "sel-docente") { S.docSel = e.target.value; S.incErr = false; render(); }
+  if (e.target.id === "f-inicio" && e.target.value) { S.inicio = e.target.value; render(); }
+});
+render();
+</script>
+</body>
+</html>
