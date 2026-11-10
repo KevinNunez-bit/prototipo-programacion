@@ -1,10 +1,18 @@
 # Prototipo de Programación Académica (CCT STAUS–UNISON)
 
+**Pruébalo aquí:** https://kevinnunez-bit.github.io/prototipo-programacion/
+
 Prototipo que hice para el servicio social. Simula cómo se haría la programación semestral de la carga académica siguiendo lo que dice el Contrato Colectivo de Trabajo 2025-2027, sobre todo las cláusulas 82 y 83.
 
 El prototipo está hecho para seguir el contrato tal cual, sin agregarle reglas nuestras. La Jefatura es la que asigna los grupos. El sistema solo muestra el orden de prioridad del contrato, los plazos y lo que hay que entregarle a cada parte (Delegación Sindical, CDVP y H. Colegio Departamental).
 
 > Todos los datos (docentes, grupos y horarios) son inventados. No es información real de ningún departamento.
+
+## Diagrama del proceso
+
+Este es el diagrama de actividad (UML, con carriles) del proceso de programación que presenté en la junta:
+
+![Diagrama de actividad del proceso de programación](diagramas/1_proceso_programacion.png)
 
 ## Qué se necesita
 
